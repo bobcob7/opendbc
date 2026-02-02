@@ -8,6 +8,10 @@ from opendbc.car.disable_ecu import disable_ecu
 from opendbc.car.interfaces import CarInterfaceBase
 
 SteerControlType = structs.CarParams.SteerControlType
+TransmissionType = structs.CarParams.TransmissionType
+
+# CAN message ID for CLUTCH message - only present on 6MT vehicles
+CLUTCH_MSG = 0x361
 
 
 class CarInterface(CarInterfaceBase):
@@ -83,6 +87,12 @@ class CarInterface(CarInterfaceBase):
     # TODO: Some TSS-P platforms have BSM, but are flipped based on region or driving direction.
     # Detect flipped signals and enable for C-HR and others
     ret.enableBsm = 0x3F6 in fingerprint[0] and candidate in TSS2_CAR
+
+    # Manual transmission: CLUTCH message (0x361) present and no transmission ECU
+    if CLUTCH_MSG in fingerprint[0] and Ecu.transmission not in found_ecus:
+      ret.transmissionType = TransmissionType.manual
+    else:
+      ret.transmissionType = TransmissionType.automatic
 
     ret.radarUnavailable = Bus.radar not in DBC[candidate]
 
